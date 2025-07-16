@@ -1,9 +1,11 @@
 const express=require("express")
 const app=express()
 const jwt=require("jsonwebtoken")
-const bodyparser=require("body-parser")
+const bodyparser=require("body-parser");
+const cookieParser = require("cookie-parser");
 require('dotenv').config();
 app.use(express.json())
+app.use(cookieParser())
 
 
 const user={
@@ -19,6 +21,14 @@ app.post("/login",(req,res)=>{
 
     if(username == user.name && password==user.password){
         const token=jwt.sign({name:user.name},process.env.serect_key)
+        
+        res.cookie("authcookie",token,{
+            httpOnly:true,
+            secure:true,
+            sameSite:"strict",
+            maxAge:60*60*1000
+        })
+
         res.json({jwttoken:token})
     }
     else{
@@ -27,12 +37,11 @@ app.post("/login",(req,res)=>{
 })
 
 
-app.get("/profile",(req,res)=>{
+app.get("/dashboard",(req,res)=>{
 
-    const authheader=req.headers["authorization"]
-    const token=authheader && authheader.split(" ")[1]
+    const token=req.cookies.authcookie
 
-    if(!token){
+    if(!token){ 
         return res.json({message:"token missing"})
     }
 
@@ -48,9 +57,15 @@ app.get("/profile",(req,res)=>{
 })
 
 
+app.post("/logout",(req,res)=>{
+    res.clearCookie("authcookie",{
+        httpOnly:true,
+        sameSite:"strict",
+        secure:false
+    })
+    res.json({message:"logged out"})
 
-
-
+})
 
 
 app.listen(3000)
